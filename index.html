@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Heiyo健康日誌</title>
+  
+  <!-- 引入 Tailwind CSS 進行快速 RWD 排版 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 引入 FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- 引入 ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #18181b;
+      --bg-card: #27272a;
+      --text-main: #fefce8;
+      --text-muted: #a1a1aa;
+      --accent-yellow: #fde047;
+      --accent-yellow-hover: #facc15;
+      --border-color: #3f3f46;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      padding-bottom: 70px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+    .card {
+      background-color: var(--bg-card);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .form-input {
+      width: 100%;
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+      appearance: none; 
+      -webkit-appearance: none;
+      position: relative;
+      z-index: 10;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-yellow);
+      box-shadow: 0 0 0 1px var(--accent-yellow);
+    }
+    
+    .form-input[readonly] {
+      background-color: #333;
+      color: var(--accent-yellow);
+      font-weight: bold;
+      border-style: dashed;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.7;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background-color: var(--accent-yellow);
+      color: #18181b;
+      font-weight: bold;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      font-size: 1.1rem;
+      transition: background-color 0.2s;
+      border: none;
+    }
+    .btn-primary:active:not(:disabled) {
+      background-color: var(--accent-yellow-hover);
+      transform: scale(0.98);
+    }
+    .btn-primary:disabled {
+      background-color: #52525b;
+      color: #a1a1aa;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      background-color: var(--bg-card);
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: bold;
+      z-index: 40;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: var(--bg-card);
+      display: flex;
+      justify-content: space-around;
+      padding: 0.5rem 0;
+      padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+      border-top: 1px solid var(--border-color);
+      z-index: 50;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 0.5rem;
+      width: 25%;
+      cursor: pointer;
+    }
+    .nav-item i {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .nav-item.active {
+      color: var(--accent-yellow);
+    }
+
+    .page-section { display: none; padding: 1rem; }
+    .page-section.active { display: block; }
+
+    .stat-sub-tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem;
+      font-weight: bold;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .stat-sub-tab.active {
+      color: var(--accent-yellow);
+      border-bottom-color: var(--accent-yellow);
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .toast {
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      border-left: 4px solid var(--accent-yellow);
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translateY(-20px);
+      font-weight: bold;
+      text-align: center;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast-container"></div>
+
+  <header class="app-header">
+    <i class="fa-solid fa-paw text-yellow-400 mr-2"></i>Heiyo健康日誌
+  </header>
+
+  <div id="global-loading" class="fixed inset-0 bg-zinc-900/90 z-[100] flex flex-col items-center justify-center hidden">
+    <i class="fa-solid fa-spinner fa-spin text-5xl text-yellow-400 mb-4"></i>
+    <p class="text-yellow-200 font-bold tracking-wider mt-2">系統同步中，請稍候...</p>
+    <p class="text-zinc-400 text-sm mt-2" id="loading-msg">正在載入歷史資料...</p>
+  </div>
+
+  <!-- ==================== 頁面 1: 起居輸入 ==================== -->
+  <main id="page-daily" class="page-section active">
+    <h2 class="text-xl font-bold mb-4 text-yellow-300">🐾 起居紀錄</h2>
+    <form id="form-daily" class="card">
+      <div class="form-group">
+        <label class="form-label">選擇日期 (年 / 月 / 日)</label>
+        <div class="flex gap-2">
+          <select id="daily-date-y" class="form-input p-2 w-1/3 text-center"></select>
+          <select id="daily-date-m" class="form-input p-2 w-1/3 text-center"></select>
+          <select id="daily-date-d" class="form-input p-2 w-1/3 text-center"></select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group">
+          <label class="form-label">清晨乾食 (g)</label>
+          <input type="number" step="0.1" inputmode="decimal" id="daily-dry-morning" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">白天乾食 (g)</label>
+          <input type="number" step="0.1" inputmode="decimal" id="daily-dry-day" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">晚上乾食 (g)</label>
+          <input type="number" step="0.1" inputmode="decimal" id="daily-dry-night" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">濕食 (g)</label>
+          <input type="number" step="0.1" inputmode="decimal" id="daily-wet" class="form-input" placeholder="0">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 border-t border-gray-600 pt-3 mt-1">
+        <div class="form-group">
+          <label class="form-label">乾食卡/克</label>
+          <input type="number" step="0.001" inputmode="decimal" id="daily-dry-kcal" class="form-input" value="3.921">
+        </div>
+        <div class="form-group">
+          <label class="form-label">濕食卡/克</label>
+          <input type="number" step="0.001" inputmode="decimal" id="daily-wet-kcal" class="form-input" value="0.9">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label text-yellow-300">當日總熱量 (kcal) - 自動計算</label>
+        <input type="text" id="daily-total-kcal" class="form-input" readonly placeholder="輸入克數後自動計算">
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <div class="form-group">
+          <label class="form-label">尿尿次數</label>
+          <input type="number" inputmode="numeric" id="daily-pee" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">大便次數</label>
+          <input type="number" inputmode="numeric" id="daily-poop" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">皮下點滴數</label>
+          <input type="number" inputmode="numeric" id="daily-subq" class="form-input" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <textarea id="daily-notes" class="form-input" rows="2" placeholder="今天狀況如何..."></textarea>
+      </div>
+      <button type="button" id="btn-submit-daily" class="btn-primary mt-2" onclick="submitData('DailyLiving')">資料載入中...</button>
+    </form>
+  </main>
+
+  <!-- ==================== 頁面 2: 健康輸入 ==================== -->
+  <main id="page-health" class="page-section">
+    <h2 class="text-xl font-bold mb-4 text-yellow-300">🩺 健康數值</h2>
+    <form id="form-health" class="card">
+      <div class="form-group">
+        <label class="form-label">選擇日期 (年 / 月 / 日)</label>
+        <div class="flex gap-2">
+          <select id="health-date-y" class="form-input p-2 w-1/3 text-center"></select>
+          <select id="health-date-m" class="form-input p-2 w-1/3 text-center"></select>
+          <select id="health-date-d" class="form-input p-2 w-1/3 text-center"></select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group">
+          <label class="form-label">體重 (kg)</label>
+          <input type="number" step="0.01" inputmode="decimal" id="health-weight" class="form-input" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">脈搏</label>
+          <input type="number" inputmode="numeric" id="health-pulse" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">高壓</label>
+          <input type="number" inputmode="numeric" id="health-bp-high" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">低壓</label>
+          <input type="number" inputmode="numeric" id="health-bp-low" class="form-input" placeholder="0">
+        </div>
+      </div>
+
+      <div class="border-t border-gray-600 pt-3 mt-1">
+        <h3 class="text-sm font-bold text-gray-300 mb-2">血液檢驗報告</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group">
+            <label class="form-label">BUN (mg/dL) 16-36</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-bun" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">CREA (mg/dL) 0.8-2.4</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-crea" class="form-input" placeholder="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label text-yellow-300">BUN / CREA 比值 - 自動計算</label>
+          <input type="text" id="health-ratio" class="form-input" readonly placeholder="輸入數值後自動計算">
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-2">
+          <div class="form-group">
+            <label class="form-label">紅血球</label>
+            <input type="number" step="0.01" inputmode="decimal" id="health-rbc" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">血球容積比</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-hct" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">血紅素</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-hgb" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">胰臟 0-4.4</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-pancreas" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">磷(PHOS) 3.1-7.5</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-phos" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">總甲狀腺（TT4） 0.8-4.7</label>
+            <input type="number" step="0.1" inputmode="decimal" id="health-tt4" class="form-input" placeholder="0">
+          </div>
+        </div>
+      </div>
+      <div class="form-group mt-2">
+        <label class="form-label">其他數值</label>
+        <input type="text" id="health-other" class="form-input" placeholder="其他檢驗項目...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <textarea id="health-notes" class="form-input" rows="2" placeholder="看診紀錄或異常說明..."></textarea>
+      </div>
+      <button type="button" id="btn-submit-health" class="btn-primary mt-2" onclick="submitData('Health')">資料載入中...</button>
+    </form>
+  </main>
+
+  <!-- ==================== 頁面 3: 花費輸入 ==================== -->
+  <main id="page-expenses" class="page-section">
+    <h2 class="text-xl font-bold mb-4 text-yellow-300">💰 照護花費</h2>
+    <form id="form-expenses" class="card">
+      <div class="form-group">
+        <label class="form-label">選擇日期 (年 / 月 / 日)</label>
+        <div class="flex gap-2">
+          <select id="exp-date-y" class="form-input p-2 w-1/3 text-center"></select>
+          <select id="exp-date-m" class="form-input p-2 w-1/3 text-center"></select>
+          <select id="exp-date-d" class="form-input p-2 w-1/3 text-center"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">花費類型</label>
+        <select id="exp-type" class="form-input">
+          <option value="食物">食物 (飼料/罐頭/零食)</option>
+          <option value="醫療">醫療 (看診/檢驗/藥物)</option>
+          <option value="耗材">耗材 (尿布/貓砂/點滴)</option>
+          <option value="玩具">玩具 (玩具/貓抓板)</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">花費項目</label>
+        <input type="text" id="exp-item" class="form-input" placeholder="例如: 皇家處方飼料 2kg">
+      </div>
+      <div class="form-group">
+        <label class="form-label">金額 (元)</label>
+        <input type="number" inputmode="numeric" id="exp-amount" class="form-input" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <textarea id="exp-notes" class="form-input" rows="2" placeholder="哪家醫院/購買管道..."></textarea>
+      </div>
+      <button type="button" id="btn-submit-exp" class="btn-primary mt-2" onclick="submitData('Expenses')">資料載入中...</button>
+    </form>
+  </main>
+
+  <!-- ==================== 頁面 4: 統計分析 ==================== -->
+  <main id="page-stats" class="page-section">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold text-yellow-300">📊 統計分析</h2>
+      <button type="button" onclick="fetchDatabaseOnLoad(true)" class="bg-zinc-700 hover:bg-zinc-600 text-yellow-300 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+        <i class="fa-solid fa-rotate-right mr-1"></i>重整資料
+      </button>
+    </div>
+    
+    <div class="flex bg-zinc-800 rounded-lg mb-4 overflow-hidden border border-zinc-700">
+      <div class="stat-sub-tab active" onclick="switchStatTab('daily', this)">起居</div>
+      <div class="stat-sub-tab" onclick="switchStatTab('health', this)">健康</div>
+      <div class="stat-sub-tab" onclick="switchStatTab('expenses', this)">花費</div>
+    </div>
+
+    <div class="card mb-4" id="stats-filter-card" style="display:none;">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-yellow-200 font-bold w-10 whitespace-nowrap">開始</label>
+          <select id="stat-start-y" class="form-input text-sm p-1 text-center"></select>
+          <select id="stat-start-m" class="form-input text-sm p-1 text-center"></select>
+          <select id="stat-start-d" class="form-input text-sm p-1 text-center"></select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-yellow-200 font-bold w-10 whitespace-nowrap">結束</label>
+          <select id="stat-end-y" class="form-input text-sm p-1 text-center"></select>
+          <select id="stat-end-m" class="form-input text-sm p-1 text-center"></select>
+          <select id="stat-end-d" class="form-input text-sm p-1 text-center"></select>
+        </div>
+      </div>
+      <button type="button" class="btn-primary mt-4 py-2" onclick="handleQueryClick(this)">載入查詢區間</button>
+    </div>
+
+    <div id="stat-loading" class="text-center py-10 hidden">
+      <i class="fa-solid fa-spinner fa-spin text-4xl text-yellow-400 mb-3"></i>
+      <p class="text-gray-400">努力撈取與運算中...</p>
+    </div>
+
+    <div id="stat-content" class="hidden pb-8">
+      
+      <!-- [區塊 A] 起居統計 -->
+      <div id="stat-sec-daily" class="stat-section block">
+        <div class="card w-full overflow-hidden">
+          <div class="flex justify-between items-center mb-3 border-b border-zinc-600 pb-2">
+            <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-chart-line mr-2"></i>趨勢折線圖</h3>
+            <div class="flex gap-2">
+              <select id="daily-chart-time-unit" class="bg-zinc-700 text-yellow-300 rounded p-1 text-sm border-none outline-none" onchange="renderCharts()">
+                <option value="day">日</option>
+                <option value="week">週</option>
+              </select>
+              <select id="daily-chart-metric" class="bg-zinc-700 text-yellow-300 rounded p-1 text-sm border-none outline-none" onchange="renderCharts()">
+                <option value="乾食">乾食</option>
+                <option value="濕食">濕食</option>
+                <option value="熱量">熱量</option>
+                <option value="皮下點滴">皮下點滴</option>
+                <option value="尿尿">尿尿</option>
+                <option value="大便">大便</option>
+              </select>
+            </div>
+          </div>
+          <div id="dailyChart" style="width: 100%; height: 260px;"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-bold text-yellow-200 mb-3 border-b border-zinc-600 pb-2"><i class="fa-solid fa-utensils mr-2"></i>區間平均/總和</h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div><p class="text-gray-400">平均熱量</p><p class="text-xl font-bold" id="avg-kcal">0 kcal</p></div>
+            <div><p class="text-gray-400">平均皮下點滴</p><p class="text-xl font-bold" id="avg-subq">0 cc</p></div>
+            <div><p class="text-gray-400">平均尿尿</p><p class="text-xl font-bold" id="avg-pee">0 次</p></div>
+            <div><p class="text-gray-400">平均大便</p><p class="text-xl font-bold" id="avg-poop">0 次</p></div>
+          </div>
+        </div>
+
+        <div class="card w-full overflow-hidden mt-4">
+          <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this, 'weekly-summary-content')">
+            <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-calendar-week mr-2"></i>區間各週摘要</h3>
+            <i class="fa-solid fa-chevron-down text-zinc-400 transition-transform duration-300 toggle-icon rotate-180"></i>
+          </div>
+          <div id="weekly-summary-content" class="mt-3 pt-3 border-t border-zinc-600">
+            <div id="weekly-summary-list" class="flex flex-col gap-2"></div>
+          </div>
+        </div>
+
+        <div class="card w-full overflow-hidden mt-4">
+          <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this, 'daily-detail-content')">
+            <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-list mr-2"></i>起居明細</h3>
+            <i class="fa-solid fa-chevron-down text-zinc-400 transition-transform duration-300 toggle-icon rotate-180"></i>
+          </div>
+          <div id="daily-detail-content" class="mt-3 pt-3 border-t border-zinc-600">
+            <div id="daily-detail-list" class="flex flex-col gap-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- [區塊 B] 健康統計 -->
+      <div id="stat-sec-health" class="stat-section hidden">
+        <div class="card w-full overflow-hidden">
+          <div class="flex justify-between items-center mb-3 border-b border-zinc-600 pb-2">
+            <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-chart-line mr-2"></i>檢驗折線圖</h3>
+            <div class="flex gap-2">
+              <select id="health-chart-time-unit" class="bg-zinc-700 text-yellow-300 rounded p-1 text-sm border-none outline-none" onchange="renderCharts()">
+                <option value="day">日</option>
+                <option value="week">週</option>
+              </select>
+              <select id="health-chart-metric" class="bg-zinc-700 text-yellow-300 rounded p-1 text-sm border-none outline-none" onchange="renderCharts()">
+                <option value="體重">體重</option>
+                <option value="CREA(mg/dL)">CREA</option>
+                <option value="BUN(mg/dL)">BUN</option>
+                <option value="BUN/CREA">BUN/CREA</option>
+                <option value="紅血球">紅血球</option>
+                <option value="血球容積比">血球容積比</option>
+                <option value="血紅素">血紅素</option>
+                <option value="胰臟">胰臟</option>
+                <option value="磷(PHOS)">磷(PHOS)</option>
+                <option value="總甲狀腺（TT4）">總甲狀腺(TT4)</option>
+              </select>
+            </div>
+          </div>
+          <div id="healthChart" style="width: 100%; height: 260px;"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-bold text-yellow-200 mb-3 border-b border-zinc-600 pb-2"><i class="fa-solid fa-heart-pulse mr-2"></i>區間健康摘要</h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div><p class="text-gray-400">平均體重</p><p class="text-xl font-bold" id="avg-weight">0 kg</p></div>
+            <div><p class="text-gray-400">平均脈搏</p><p class="text-xl font-bold" id="avg-pulse">0</p></div>
+            <div><p class="text-gray-400">平均高壓</p><p class="text-xl font-bold" id="avg-bp-high">0</p></div>
+            <div><p class="text-gray-400">平均低壓</p><p class="text-xl font-bold" id="avg-bp-low">0</p></div>
+          </div>
+        </div>
+
+        <div class="card w-full overflow-hidden mt-4">
+          <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this, 'health-detail-content')">
+            <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-list mr-2"></i>健康明細</h3>
+            <i class="fa-solid fa-chevron-down text-zinc-400 transition-transform duration-300 toggle-icon rotate-180"></i>
+          </div>
+          <div id="health-detail-content" class="mt-3 pt-3 border-t border-zinc-600">
+            <div id="health-detail-list" class="flex flex-col gap-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- [區塊 C] 花費統計 -->
+      <div id="stat-sec-expenses" class="stat-section hidden">
+        <div class="card text-center">
+          <h3 class="text-lg font-bold text-yellow-200 mb-2 border-b border-zinc-600 pb-2"><i class="fa-solid fa-wallet mr-2"></i>區間累積花費</h3>
+          <p class="text-4xl font-bold text-white mt-4" id="stat-total-exp">$0</p>
+        </div>
+
+        <div class="card w-full overflow-hidden">
+          <h3 class="text-lg font-bold text-yellow-200 mb-3 border-b border-zinc-600 pb-2"><i class="fa-solid fa-chart-pie mr-2"></i>花費類型圓餅圖</h3>
+          <div id="expenseChart" style="width: 100%; height: 280px;"></div>
+        </div>
+
+        <div class="card w-full overflow-hidden mt-4">
+          <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this, 'exp-detail-content')">
+            <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-list mr-2"></i>花費明細</h3>
+            <i class="fa-solid fa-chevron-down text-zinc-400 transition-transform duration-300 toggle-icon rotate-180"></i>
+          </div>
+          <div id="exp-detail-content" class="mt-3 pt-3 border-t border-zinc-600">
+            <div id="exp-detail-list" class="flex flex-col gap-2"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('daily', this)">
+      <i class="fa-solid fa-utensils"></i>
+      <span>起居</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('health', this)">
+      <i class="fa-solid fa-heart-pulse"></i>
+      <span>健康</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('expenses', this)">
+      <i class="fa-solid fa-wallet"></i>
+      <span>花費</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('stats', this)">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>統計</span>
+    </div>
+  </nav>
+
+  <!-- ✨ 修改紀錄用的彈出視窗 Modal -->
+  <div id="edit-modal" class="fixed inset-0 bg-zinc-900/95 z-[200] hidden flex-col items-center justify-center p-4">
+    <div class="bg-zinc-800 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-zinc-600 p-5 relative shadow-2xl">
+      <button type="button" onclick="closeEditModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-yellow-400 text-2xl">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-xl font-bold text-yellow-300 mb-4 border-b border-zinc-600 pb-2"><i class="fa-solid fa-pen mr-2"></i>修改紀錄</h3>
+      
+      <input type="hidden" id="edit-sheet-name">
+      <input type="hidden" id="edit-original-date">
+
+      <div class="form-group mb-4">
+        <label class="form-label text-yellow-200">紀錄日期</label>
+        <input type="date" id="edit-date" class="form-input font-bold" required>
+      </div>
+
+      <!-- 修改表單：起居 -->
+      <div id="edit-form-DailyLiving" class="edit-form-section hidden">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group"><label class="form-label">清晨乾食 (g)</label><input type="number" step="0.1" id="edit-daily-dry-morning" class="form-input"></div>
+          <div class="form-group"><label class="form-label">白天乾食 (g)</label><input type="number" step="0.1" id="edit-daily-dry-day" class="form-input"></div>
+          <div class="form-group"><label class="form-label">晚上乾食 (g)</label><input type="number" step="0.1" id="edit-daily-dry-night" class="form-input"></div>
+          <div class="form-group"><label class="form-label">濕食 (g)</label><input type="number" step="0.1" id="edit-daily-wet" class="form-input"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 border-t border-gray-600 pt-3 mt-1">
+          <div class="form-group"><label class="form-label">乾食卡/克</label><input type="number" step="0.001" id="edit-daily-dry-kcal" class="form-input" value="3.921"></div>
+          <div class="form-group"><label class="form-label">濕食卡/克</label><input type="number" step="0.001" id="edit-daily-wet-kcal" class="form-input" value="0.9"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label text-yellow-300">當日總熱量 (kcal)</label>
+          <input type="text" id="edit-daily-total-kcal" class="form-input" readonly>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="form-group"><label class="form-label">尿尿</label><input type="number" id="edit-daily-pee" class="form-input"></div>
+          <div class="form-group"><label class="form-label">大便</label><input type="number" id="edit-daily-poop" class="form-input"></div>
+          <div class="form-group"><label class="form-label">點滴</label><input type="number" id="edit-daily-subq" class="form-input"></div>
+        </div>
+        <div class="form-group mt-2">
+          <label class="form-label">備註</label>
+          <textarea id="edit-daily-notes" class="form-input" rows="2"></textarea>
+        </div>
+      </div>
+
+      <!-- 修改表單：健康 -->
+      <div id="edit-form-Health" class="edit-form-section hidden">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group"><label class="form-label">體重 (kg)</label><input type="number" step="0.01" id="edit-health-weight" class="form-input"></div>
+          <div class="form-group"><label class="form-label">脈搏</label><input type="number" id="edit-health-pulse" class="form-input"></div>
+          <div class="form-group"><label class="form-label">高壓</label><input type="number" id="edit-health-bp-high" class="form-input"></div>
+          <div class="form-group"><label class="form-label">低壓</label><input type="number" id="edit-health-bp-low" class="form-input"></div>
+        </div>
+        <div class="border-t border-gray-600 pt-3 mt-1">
+          <h3 class="text-sm font-bold text-gray-300 mb-2">血液檢驗報告</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="form-group"><label class="form-label">BUN</label><input type="number" step="0.1" id="edit-health-bun" class="form-input"></div>
+            <div class="form-group"><label class="form-label">CREA</label><input type="number" step="0.1" id="edit-health-crea" class="form-input"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label text-yellow-300">BUN / CREA</label>
+            <input type="text" id="edit-health-ratio" class="form-input" readonly>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mt-2">
+            <div class="form-group"><label class="form-label">紅血球</label><input type="number" step="0.01" id="edit-health-rbc" class="form-input"></div>
+            <div class="form-group"><label class="form-label">血球容積</label><input type="number" step="0.1" id="edit-health-hct" class="form-input"></div>
+            <div class="form-group"><label class="form-label">血紅素</label><input type="number" step="0.1" id="edit-health-hgb" class="form-input"></div>
+            <div class="form-group"><label class="form-label">胰臟</label><input type="number" step="0.1" id="edit-health-pancreas" class="form-input"></div>
+            <div class="form-group"><label class="form-label">磷(PHOS)</label><input type="number" step="0.1" id="edit-health-phos" class="form-input"></div>
+            <div class="form-group"><label class="form-label">TT4</label><input type="number" step="0.1" id="edit-health-tt4" class="form-input"></div>
+          </div>
+        </div>
+        <div class="form-group mt-2">
+          <label class="form-label">其他數值</label>
+          <input type="text" id="edit-health-other" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註</label>
+          <textarea id="edit-health-notes" class="form-input" rows="2"></textarea>
+        </div>
+      </div>
+
+      <!-- 修改表單：花費 -->
+      <div id="edit-form-Expenses" class="edit-form-section hidden">
+        <div class="form-group">
+          <label class="form-label">花費類型</label>
+          <select id="edit-exp-type" class="form-input">
+            <option value="食物">食物 (飼料/罐頭/零食)</option>
+            <option value="醫療">醫療 (看診/檢驗/藥物)</option>
+            <option value="耗材">耗材 (尿布/貓砂/點滴)</option>
+            <option value="玩具">玩具 (玩具/貓抓板)</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">花費項目</label>
+          <input type="text" id="edit-exp-item" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">金額 (元)</label>
+          <input type="number" id="edit-exp-amount" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註</label>
+          <textarea id="edit-exp-notes" class="form-input" rows="2"></textarea>
+        </div>
+      </div>
+
+      <button type="button" id="btn-save-edit" class="btn-primary mt-4 w-full" onclick="submitEdit()">💾 儲存修改</button>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyrCgnbd1q3crB8MmbtvyBdTdFRPY3a-mIHiqKQz2CI1Ld6CnGnyGluaj1yCJe3vKM-/exec';
+
+    let globalDataCache = { DailyLiving: [], Health: [], Expenses: [] };
+    let currentStatTab = 'daily';
+    let isDataReady = false;
+
+    let eChartDaily = null;
+    let eChartHealth = null;
+    let eChartExpense = null;
+
+    window.onload = () => {
+      setupYMDSelectors('daily-date');
+      setupYMDSelectors('health-date');
+      setupYMDSelectors('exp-date');
+      
+      let now = new Date();
+      let past = new Date();
+      past.setDate(now.getDate() - 30);
+      setupYMDSelectors('stat-start', past);
+      setupYMDSelectors('stat-end', now);
+
+      fetchDatabaseOnLoad();
+    };
+
+    function toggleSection(element, contentId) {
+        const content = document.getElementById(contentId);
+        const icon = element.querySelector('.toggle-icon');
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            if(icon) icon.classList.add('rotate-180');
+        } else {
+            content.classList.add('hidden');
+            if(icon) icon.classList.remove('rotate-180');
+        }
+    }
+
+    function setupYMDSelectors(prefix, defaultDateObj) {
+      const yearSel = document.getElementById(prefix + '-y');
+      const monthSel = document.getElementById(prefix + '-m');
+      const daySel = document.getElementById(prefix + '-d');
+      const targetDate = defaultDateObj || new Date();
+      
+      yearSel.innerHTML = '';
+      for (let y = 2025; y <= 2032; y++) {
+        yearSel.add(new Option(y + '年', y));
+      }
+      let cy = targetDate.getFullYear();
+      yearSel.value = (cy >= 2025 && cy <= 2032) ? cy : 2025;
+
+      monthSel.innerHTML = '';
+      for (let m = 1; m <= 12; m++) {
+        monthSel.add(new Option(String(m).padStart(2, '0') + '月', String(m).padStart(2, '0')));
+      }
+      monthSel.value = String(targetDate.getMonth() + 1).padStart(2, '0');
+
+      const updateDays = () => {
+        const y = parseInt(yearSel.value, 10);
+        const m = parseInt(monthSel.value, 10);
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const currentDay = daySel.value;
+        
+        daySel.innerHTML = '';
+        for (let d = 1; d <= daysInMonth; d++) {
+          daySel.add(new Option(String(d).padStart(2, '0') + '日', String(d).padStart(2, '0')));
+        }
+        
+        if (!currentDay) {
+          daySel.value = String(targetDate.getDate()).padStart(2, '0');
+        } else if (parseInt(currentDay, 10) <= daysInMonth) {
+          daySel.value = currentDay;
+        } else {
+          daySel.value = String(daysInMonth).padStart(2, '0');
+        }
+      };
+
+      yearSel.addEventListener('change', updateDays);
+      monthSel.addEventListener('change', updateDays);
+      updateDays();
+    }
+
+    function getSelectedDate(prefix) {
+      const y = document.getElementById(prefix + '-y').value;
+      const m = document.getElementById(prefix + '-m').value;
+      const d = document.getElementById(prefix + '-d').value;
+      return `${y}-${m}-${d}`;
+    }
+
+    function switchTab(pageId, element) {
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      
+      if(pageId === 'stats') {
+        if(isDataReady) {
+          document.getElementById('stat-content').classList.remove('hidden');
+          renderCharts();
+          setTimeout(() => { 
+            if(eChartDaily) eChartDaily.resize(); 
+            if(eChartHealth) eChartHealth.resize(); 
+            if(eChartExpense) eChartExpense.resize(); 
+          }, 150);
+        } else if (!document.getElementById('global-loading').classList.contains('hidden') === false) {
+          fetchDatabaseOnLoad();
+        }
+      }
+    }
+
+    function switchStatTab(tabName, element) {
+      currentStatTab = tabName;
+      document.querySelectorAll('.stat-sub-tab').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      
+      document.querySelectorAll('.stat-section').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('block');
+      });
+      
+      document.getElementById('stat-sec-' + tabName).classList.add('block');
+      document.getElementById('stat-sec-' + tabName).classList.remove('hidden');
+
+      setTimeout(() => renderCharts(), 50);
+    }
+
+    function showToast(message, isError = false) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      if (isError) toast.style.borderLeftColor = '#ef4444';
+      toast.innerHTML = isError ? `<i class="fa-solid fa-circle-exclamation mr-2 text-red-500"></i>${message}` 
+                                : `<i class="fa-solid fa-circle-check mr-2 text-yellow-400"></i>${message}`;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function handleQueryClick(btn) {
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在計算...';
+      btn.disabled = true;
+
+      document.getElementById('stat-content').classList.remove('hidden');
+
+      setTimeout(() => {
+          renderCharts();
+          showToast('📊 查詢完成，資料已更新！');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+      }, 150);
+    }
+
+    const dailyInputs = ['daily-dry-morning', 'daily-dry-day', 'daily-dry-night', 'daily-wet', 'daily-dry-kcal', 'daily-wet-kcal'];
+    dailyInputs.forEach(id => document.getElementById(id).addEventListener('input', calculateDailyKcal));
+
+    function calculateDailyKcal() {
+      const dryM = parseFloat(document.getElementById('daily-dry-morning').value) || 0;
+      const dryD = parseFloat(document.getElementById('daily-dry-day').value) || 0;
+      const dryN = parseFloat(document.getElementById('daily-dry-night').value) || 0;
+      const wet = parseFloat(document.getElementById('daily-wet').value) || 0;
+      const dryKcal = parseFloat(document.getElementById('daily-dry-kcal').value) || 3.921;
+      const wetKcal = parseFloat(document.getElementById('daily-wet-kcal').value) || 0.9;
+      const total = ((dryM + dryD + dryN) * dryKcal) + (wet * wetKcal);
+      document.getElementById('daily-total-kcal').value = total > 0 ? (Math.round(total * 10) / 10) : '';
+    }
+
+    ['health-bun', 'health-crea'].forEach(id => document.getElementById(id).addEventListener('input', calculateRatio));
+
+    function calculateRatio() {
+      const bun = parseFloat(document.getElementById('health-bun').value) || 0;
+      const crea = parseFloat(document.getElementById('health-crea').value) || 0;
+      document.getElementById('health-ratio').value = crea > 0 ? (bun / crea).toFixed(2) : 'N/A';
+    }
+
+    const editDailyInputs = ['edit-daily-dry-morning', 'edit-daily-dry-day', 'edit-daily-dry-night', 'edit-daily-wet', 'edit-daily-dry-kcal', 'edit-daily-wet-kcal'];
+    editDailyInputs.forEach(id => document.getElementById(id).addEventListener('input', calculateEditDailyKcal));
+
+    function calculateEditDailyKcal() {
+      const dryM = parseFloat(document.getElementById('edit-daily-dry-morning').value) || 0;
+      const dryD = parseFloat(document.getElementById('edit-daily-dry-day').value) || 0;
+      const dryN = parseFloat(document.getElementById('edit-daily-dry-night').value) || 0;
+      const wet = parseFloat(document.getElementById('edit-daily-wet').value) || 0;
+      const dryKcal = parseFloat(document.getElementById('edit-daily-dry-kcal').value) || 3.921;
+      const wetKcal = parseFloat(document.getElementById('edit-daily-wet-kcal').value) || 0.9;
+      const total = ((dryM + dryD + dryN) * dryKcal) + (wet * wetKcal);
+      document.getElementById('edit-daily-total-kcal').value = total > 0 ? (Math.round(total * 10) / 10) : '';
+    }
+
+    ['edit-health-bun', 'edit-health-crea'].forEach(id => document.getElementById(id).addEventListener('input', calculateEditRatio));
+
+    function calculateEditRatio() {
+      const bun = parseFloat(document.getElementById('edit-health-bun').value) || 0;
+      const crea = parseFloat(document.getElementById('edit-health-crea').value) || 0;
+      document.getElementById('edit-health-ratio').value = crea > 0 ? (bun / crea).toFixed(2) : 'N/A';
+    }
+
+    function submitData(sheetName) {
+      if (!SCRIPT_URL) return showToast('請先設定 SCRIPT_URL！', true);
+      if (!isDataReady) return showToast('資料庫尚未同步完成，請稍候再儲存！', true);
+
+      let datePrefix = sheetName === 'DailyLiving' ? 'daily-date' : (sheetName === 'Health' ? 'health-date' : 'exp-date');
+      let targetDate = getSelectedDate(datePrefix);
+      
+      const exists = (globalDataCache[sheetName] || []).some(row => row['_safeDate'] === targetDate);
+      if (exists) {
+        showToast(`⚠️ 您在 ${targetDate} 已經有「${sheetName === 'DailyLiving' ? '起居' : (sheetName === 'Health' ? '健康' : '花費')}」紀錄了，無法重複新增。`, true);
+        return;
+      }
+
+      const btn = event.currentTarget || event.target;
+      const originalText = btn.innerHTML;
+      let dataRow = [];
+      
+      if (sheetName === 'DailyLiving') {
+        dataRow = [targetDate, document.getElementById('daily-dry-morning').value, document.getElementById('daily-dry-day').value, document.getElementById('daily-dry-night').value, document.getElementById('daily-wet').value, document.getElementById('daily-dry-kcal').value, document.getElementById('daily-wet-kcal').value, document.getElementById('daily-total-kcal').value, document.getElementById('daily-pee').value, document.getElementById('daily-poop').value, document.getElementById('daily-subq').value, document.getElementById('daily-notes').value];
+      } else if (sheetName === 'Health') {
+        dataRow = [targetDate, "", "", document.getElementById('health-bp-high').value, document.getElementById('health-bp-low').value, document.getElementById('health-pulse').value, document.getElementById('health-weight').value, document.getElementById('health-crea').value, document.getElementById('health-bun').value, document.getElementById('health-ratio').value, document.getElementById('health-rbc').value, document.getElementById('health-hct').value, document.getElementById('health-hgb').value, document.getElementById('health-pancreas').value, document.getElementById('health-phos').value, document.getElementById('health-tt4').value, document.getElementById('health-other').value, document.getElementById('health-notes').value];
+      } else if (sheetName === 'Expenses') {
+        dataRow = [targetDate, document.getElementById('exp-type').value, document.getElementById('exp-item').value, document.getElementById('exp-amount').value, document.getElementById('exp-notes').value];
+      }
+
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 儲存中...';
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify({ action: 'saveData', sheetName, dataRow }) 
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          showToast('🎉 資料已成功儲存！');
+          fetchDatabaseOnLoad(); 
+        }
+        else showToast('儲存失敗：' + data.message, true);
+      })
+      .catch(err => {
+        console.error("Fetch Error:", err);
+        showToast('網路連線失敗。請確認 GAS 部署權限是否設為「所有人」。', true);
+      })
+      .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
+    }
+
+    function editRecord(sheetName, safeDate) {
+      let row = (globalDataCache[sheetName] || []).find(r => r['_safeDate'] === safeDate);
+      if (!row) {
+         showToast('找不到該筆歷史資料', true);
+         return;
+      }
+
+      document.getElementById('edit-modal').classList.remove('hidden');
+      document.getElementById('edit-modal').classList.add('flex');
+      
+      document.querySelectorAll('.edit-form-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById('edit-form-' + sheetName).classList.remove('hidden');
+
+      document.getElementById('edit-sheet-name').value = sheetName;
+      document.getElementById('edit-original-date').value = safeDate;
+      document.getElementById('edit-date').value = safeDate;
+
+      if (sheetName === 'DailyLiving') {
+        document.getElementById('edit-daily-dry-morning').value = getColVal(row, ['清晨乾食克數', '清晨乾食', '清晨']) || '';
+        document.getElementById('edit-daily-dry-day').value = getColVal(row, ['白天乾食克數', '白天乾食', '白天']) || '';
+        document.getElementById('edit-daily-dry-night').value = getColVal(row, ['晚上乾食克數', '晚上乾食', '晚上']) || '';
+        document.getElementById('edit-daily-wet').value = getColVal(row, ['濕食克數', '溼食克數', '濕食', '溼食']) || '';
+        document.getElementById('edit-daily-dry-kcal').value = getColVal(row, ['乾食卡/克', '乾食卡']) || '3.921';
+        document.getElementById('edit-daily-wet-kcal').value = getColVal(row, ['濕食卡/克', '溼食卡/克', '濕食卡']) || '0.9';
+        document.getElementById('edit-daily-pee').value = getColVal(row, ['尿尿次數', '尿尿']) || '';
+        document.getElementById('edit-daily-poop').value = getColVal(row, ['大便次數', '大便']) || '';
+        document.getElementById('edit-daily-subq').value = getColVal(row, ['皮下', '皮下點滴數', '皮下CC']) || '';
+        document.getElementById('edit-daily-notes').value = getColVal(row, ['備註']) || '';
+        calculateEditDailyKcal();
+      } else if (sheetName === 'Health') {
+        document.getElementById('edit-health-weight').value = getColVal(row, ['體重', '體重(kg)']) || '';
+        document.getElementById('edit-health-pulse').value = getColVal(row, ['脈搏']) || '';
+        document.getElementById('edit-health-bp-high').value = getColVal(row, ['高壓']) || '';
+        document.getElementById('edit-health-bp-low').value = getColVal(row, ['低壓']) || '';
+        document.getElementById('edit-health-bun').value = getColVal(row, ['BUN(mg/dL)', 'BUN']) || '';
+        document.getElementById('edit-health-crea').value = getColVal(row, ['CREA(mg/dL)', 'CREA']) || '';
+        document.getElementById('edit-health-rbc').value = getColVal(row, ['紅血球']) || '';
+        document.getElementById('edit-health-hct').value = getColVal(row, ['血球容積比']) || '';
+        document.getElementById('edit-health-hgb').value = getColVal(row, ['血紅素']) || '';
+        document.getElementById('edit-health-pancreas').value = getColVal(row, ['胰臟']) || '';
+        document.getElementById('edit-health-phos').value = getColVal(row, ['磷(PHOS)', '磷']) || '';
+        document.getElementById('edit-health-tt4').value = getColVal(row, ['總甲狀腺（TT4）', '總甲狀腺(TT4)', 'TT4']) || '';
+        document.getElementById('edit-health-other').value = getColVal(row, ['其他數值', '其他']) || '';
+        document.getElementById('edit-health-notes').value = getColVal(row, ['備註']) || '';
+        calculateEditRatio();
+      } else if (sheetName === 'Expenses') {
+        let type = getColVal(row, ['花費類型', '類型']) || '其他';
+        let selectEl = document.getElementById('edit-exp-type');
+        let options = Array.from(selectEl.options).map(opt => opt.value);
+        if(!options.includes(type)) type = '其他';
+        selectEl.value = type;
+
+        document.getElementById('edit-exp-item').value = getColVal(row, ['花費項目', '項目']) || '';
+        document.getElementById('edit-exp-amount').value = getColVal(row, ['金額 (元)', '金額(元)', '金額', '花費']) || '';
+        document.getElementById('edit-exp-notes').value = getColVal(row, ['備註']) || '';
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+      document.getElementById('edit-modal').classList.remove('flex');
+    }
+
+    function submitEdit() {
+      const sheetName = document.getElementById('edit-sheet-name').value;
+      const originalDate = document.getElementById('edit-original-date').value;
+      let targetDate = document.getElementById('edit-date').value;
+      
+      if(!targetDate) return showToast('日期不能為空', true);
+
+      let dataRow = [];
+      if (sheetName === 'DailyLiving') {
+        dataRow = [targetDate, document.getElementById('edit-daily-dry-morning').value, document.getElementById('edit-daily-dry-day').value, document.getElementById('edit-daily-dry-night').value, document.getElementById('edit-daily-wet').value, document.getElementById('edit-daily-dry-kcal').value, document.getElementById('edit-daily-wet-kcal').value, document.getElementById('edit-daily-total-kcal').value, document.getElementById('edit-daily-pee').value, document.getElementById('edit-daily-poop').value, document.getElementById('edit-daily-subq').value, document.getElementById('edit-daily-notes').value];
+      } else if (sheetName === 'Health') {
+        dataRow = [targetDate, "", "", document.getElementById('edit-health-bp-high').value, document.getElementById('edit-health-bp-low').value, document.getElementById('edit-health-pulse').value, document.getElementById('edit-health-weight').value, document.getElementById('edit-health-crea').value, document.getElementById('edit-health-bun').value, document.getElementById('edit-health-ratio').value, document.getElementById('edit-health-rbc').value, document.getElementById('edit-health-hct').value, document.getElementById('edit-health-hgb').value, document.getElementById('edit-health-pancreas').value, document.getElementById('edit-health-phos').value, document.getElementById('edit-health-tt4').value, document.getElementById('edit-health-other').value, document.getElementById('edit-health-notes').value];
+      } else if (sheetName === 'Expenses') {
+        dataRow = [targetDate, document.getElementById('edit-exp-type').value, document.getElementById('edit-exp-item').value, document.getElementById('edit-exp-amount').value, document.getElementById('edit-exp-notes').value];
+      }
+
+      const btn = document.getElementById('btn-save-edit');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 儲存中...';
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify({ 
+          action: 'updateData', 
+          sheetName: sheetName, 
+          originalDate: originalDate,
+          dataRow: dataRow 
+        }) 
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          showToast('🎉 資料修改成功！');
+          closeEditModal();
+          fetchDatabaseOnLoad(true); 
+        }
+        else showToast('儲存失敗：' + data.message, true);
+      })
+      .catch(err => {
+          console.error("Fetch Error:", err);
+          showToast('網路連線失敗。請確認 GAS 部署權限是否設為「所有人」。', true);
+      })
+      .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
+    }
+
+    function normalizeKeys(dataObj) {
+      let normalized = {};
+      for (let key in dataObj) {
+        normalized[key] = dataObj[key].map(row => {
+          let newRow = {};
+          for (let col in row) {
+            let cleanCol = String(col).replace(/\s+/g, '').trim(); 
+            newRow[cleanCol] = row[col];
+          }
+          return newRow;
+        });
+      }
+      return normalized;
+    }
+
+    function extractValidDate(rawStr) {
+      if (rawStr === null || rawStr === undefined || rawStr === '') return null;
+      let str = String(rawStr).trim();
+
+      if (!isNaN(str) && Number(str) > 30000 && Number(str) < 60000) {
+          let dateObj = new Date(Math.round((Number(str) - 25569) * 86400 * 1000));
+          let year = dateObj.getUTCFullYear();
+          let month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+          let day = String(dateObj.getUTCDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+      }
+
+      let match1 = str.match(/(?:^|\D)(\d{4})[-\/年](\d{1,2})[-\/月](\d{1,2})/);
+      if (match1) return `${match1[1]}-${match1[2].padStart(2, '0')}-${match1[3].padStart(2, '0')}`;
+
+      let match3 = str.match(/(?:^|\D)(\d{2,3})[-\/年](\d{1,2})[-\/月](\d{1,2})/);
+      if (match3) {
+          let year = parseInt(match3[1]) + 1911;
+          return `${year}-${match3[2].padStart(2, '0')}-${match3[3].padStart(2, '0')}`;
+      }
+
+      if (str.length > 8 && isNaN(str)) {
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          let year = d.getFullYear();
+          let month = String(d.getMonth() + 1).padStart(2, '0');
+          let day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      }
+      return null;
+    }
+
+    function getColVal(row, possibleKeys) {
+      for (let key of possibleKeys) {
+        let searchKey = key.replace(/\s+/g, '');
+        if (row[searchKey] !== undefined && String(row[searchKey]).trim() !== '') {
+          return row[searchKey];
+        }
+      }
+      return undefined;
+    }
+
+    function findDateVal(row) {
+      let possibleKeys = ['日期', 'Date', 'date', '時間', '輸入日期'];
+      for(let k of possibleKeys) {
+        if(row[k] !== undefined && String(row[k]).trim() !== '') return row[k];
+      }
+      for(let k in row) {
+        if(extractValidDate(row[k])) return row[k];
+      }
+      return null;
+    }
+
+    function fetchDatabaseOnLoad(forceReRender = false) {
+      document.getElementById('global-loading').classList.remove('hidden');
+      document.getElementById('loading-msg').innerText = "正在連線 Google Sheets...";
+      
+      let submitBtns = ['btn-submit-daily', 'btn-submit-health', 'btn-submit-exp'];
+      submitBtns.forEach(id => {
+         let btn = document.getElementById(id);
+         if(btn) btn.disabled = true;
+      });
+
+      fetch(SCRIPT_URL, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify({ action: 'getAllData' }) 
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'success') {
+          document.getElementById('loading-msg').innerText = "資料清理與合併中...";
+          globalDataCache = normalizeKeys(res.data);
+          isDataReady = true;
+
+          ['DailyLiving', 'Health', 'Expenses'].forEach(sheet => {
+            (globalDataCache[sheet] || []).forEach(row => {
+              let rawDate = findDateVal(row);
+              let safeDateStr = extractValidDate(rawDate);
+              if (safeDateStr) {
+                row['_safeDate'] = safeDateStr; 
+              }
+            });
+          });
+
+          document.getElementById('stats-filter-card').style.display = 'block';
+          
+          if (document.getElementById('page-stats').classList.contains('active')) {
+            document.getElementById('stat-content').classList.remove('hidden');
+            setTimeout(() => {
+               renderCharts();
+               if(forceReRender) showToast('資料已重新整理為最新狀態！');
+            }, 100);
+          }
+
+          const btnTexts = {
+            'btn-submit-daily': '儲存起居紀錄',
+            'btn-submit-health': '儲存健康紀錄',
+            'btn-submit-exp': '儲存花費紀錄'
+          };
+          submitBtns.forEach(id => {
+            let btn = document.getElementById(id);
+            if(btn) {
+              btn.disabled = false;
+              btn.innerText = btnTexts[id];
+            }
+          });
+
+        } else {
+          showToast('連線失敗，請檢查網路', true);
+        }
+      })
+      .catch(err => {
+          console.error("Fetch Error:", err);
+          showToast('載入資料庫失敗。請確認 GAS 部署權限是否設為「所有人」。', true);
+      })
+      .finally(() => {
+        document.getElementById('global-loading').classList.add('hidden');
+      });
+    }
+
+    function getWeekInfo(dateStr) {
+        let d = new Date(dateStr);
+        let day = d.getDay();
+        let diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        let monday = new Date(d);
+        monday.setDate(diff);
+
+        let sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        let targetThursday = new Date(monday);
+        targetThursday.setDate(monday.getDate() + 3);
+        let targetJan1 = new Date(targetThursday.getFullYear(), 0, 1);
+        let weekNum = Math.ceil((((targetThursday - targetJan1) / 86400000) + 1) / 7);
+
+        let mStr = `${monday.getMonth()+1}/${monday.getDate()}`;
+        let sStr = `${sunday.getMonth()+1}/${sunday.getDate()}`;
+
+        return {
+            label: `${targetThursday.getFullYear()}年 第${weekNum}週 (${mStr} ~ ${sStr})`,
+            key: `${targetThursday.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
+        };
+    }
+
+    function renderCharts() {
+      const startStr = getSelectedDate('stat-start');
+      const endStr = getSelectedDate('stat-end');
+
+      if (startStr > endStr) {
+        showToast("開始日期不能大於結束日期！", true);
+        return;
+      }
+
+      const filterByRange = (arr) => arr.filter(row => {
+        if (!row['_safeDate']) return false;
+        return row['_safeDate'] >= startStr && row['_safeDate'] <= endStr;
+      }).sort((a,b) => b['_safeDate'].localeCompare(a['_safeDate']));
+
+      if(currentStatTab === 'daily') {
+        const dData = filterByRange(globalDataCache.DailyLiving || []);
+        let totalKcal=0, totalSubq=0, totalPee=0, totalPoop=0;
+        let countKcal=0, countSubq=0, countPee=0, countPoop=0;
+        
+        let chartDates = [], chartVals = [];
+        const metric = document.getElementById('daily-chart-metric').value;
+        const timeUnit = document.getElementById('daily-chart-time-unit').value;
+        let weeklyMap = {};
+
+        let detailHtml = '';
+
+        dData.forEach((row) => {
+          let dryMStr = getColVal(row, ['清晨乾食克數', '清晨乾食', '清晨']);
+          let dryDStr = getColVal(row, ['白天乾食克數', '白天乾食', '白天']);
+          let dryNStr = getColVal(row, ['晚上乾食克數', '晚上乾食', '晚上']);
+          let wetStr = getColVal(row, ['濕食克數', '溼食克數', '濕食', '溼食']);
+          let kcalStr = getColVal(row, ['當日總卡', '總卡', '總熱量']);
+          let subqRaw = getColVal(row, ['皮下', '皮下點滴數', '皮下CC', '皮下點滴']);
+          let peeRaw = getColVal(row, ['尿尿次數', '尿尿']);
+          let poopRaw = getColVal(row, ['大便次數', '大便']);
+
+          let dryM = parseFloat(dryMStr) || 0;
+          let dryD = parseFloat(dryDStr) || 0;
+          let dryN = parseFloat(dryNStr) || 0;
+          let dry = Math.round((dryM + dryD + dryN) * 10) / 10; 
+          let wet = Math.round((parseFloat(wetStr) || 0) * 10) / 10;
+          let kcal = Math.round((parseFloat(kcalStr) || 0) * 10) / 10;
+          let subq = parseFloat(subqRaw)||0;
+
+          if (kcalStr !== undefined) { totalKcal += kcal; countKcal++; }
+          if (subqRaw !== undefined) { totalSubq += subq; countSubq++; }
+          if (peeRaw !== undefined) { totalPee += parseFloat(peeRaw)||0; countPee++; }
+          if (poopRaw !== undefined) { totalPoop += parseFloat(poopRaw)||0; countPoop++; }
+
+          let wInfo = getWeekInfo(row['_safeDate']);
+          if (!weeklyMap[wInfo.key]) {
+             weeklyMap[wInfo.key] = { label: wInfo.label, key: wInfo.key, sumKcal:0, cntKcal:0, sumSubq:0, cntSubq:0, sumMetric:0, cntMetric:0 };
+          }
+          if (kcalStr !== undefined) { weeklyMap[wInfo.key].sumKcal += kcal; weeklyMap[wInfo.key].cntKcal++; }
+          if (subqRaw !== undefined) { weeklyMap[wInfo.key].sumSubq += subq; weeklyMap[wInfo.key].cntSubq++; }
+          
+          let metricVal = 0;
+          let hasMetric = false;
+          if(metric==='乾食' && ((dryMStr !== undefined) || (dryDStr !== undefined) || (dryNStr !== undefined))) { metricVal = dry; hasMetric = true; }
+          if(metric==='濕食' && wetStr !== undefined) { metricVal = wet; hasMetric = true; }
+          if(metric==='熱量' && kcalStr !== undefined) { metricVal = kcal; hasMetric = true; }
+          if(metric==='皮下點滴' && subqRaw !== undefined) { metricVal = subq; hasMetric = true; }
+          if(metric==='尿尿' && peeRaw !== undefined) { metricVal = parseFloat(peeRaw)||0; hasMetric = true; }
+          if(metric==='大便' && poopRaw !== undefined) { metricVal = parseFloat(poopRaw)||0; hasMetric = true; }
+          
+          if(hasMetric) {
+             weeklyMap[wInfo.key].sumMetric += metricVal;
+             weeklyMap[wInfo.key].cntMetric++;
+          }
+
+          if (timeUnit === 'day') {
+             chartDates.unshift(row['_safeDate'].substring(5).replace('-', '/')); 
+             chartVals.unshift(hasMetric ? metricVal : 0);
+          }
+
+          detailHtml += `<div class="bg-zinc-800 p-2.5 rounded-lg border border-zinc-700 mb-2 flex justify-between items-center">
+            <div class="w-full">
+              <div class="text-yellow-400 font-bold mb-1">${row['_safeDate']}</div>
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-300">
+                <span>乾食 <span class="font-bold text-yellow-200">${dry}</span>g</span> <span class="text-zinc-600">|</span>
+                <span>濕食 <span class="font-bold text-yellow-200">${wet}</span>g</span> <span class="text-zinc-600">|</span>
+                <span>熱量 <span class="font-bold text-yellow-200">${kcal}</span></span> <span class="text-zinc-600">|</span>
+                <span>尿 <span class="font-bold text-yellow-200">${parseFloat(peeRaw)||0}</span></span> <span class="text-zinc-600">|</span>
+                <span>便 <span class="font-bold text-yellow-200">${parseFloat(poopRaw)||0}</span></span> <span class="text-zinc-600">|</span>
+                <span>滴 <span class="font-bold text-yellow-200">${parseFloat(subqRaw)||0}</span></span>
+              </div>
+            </div>
+            <button onclick="editRecord('DailyLiving', '${row['_safeDate']}')" class="text-zinc-400 hover:text-yellow-400 p-3 shrink-0"><i class="fa-solid fa-pen"></i></button>
+          </div>`;
+        });
+
+        let weeklyHtml = '';
+        let sortedWeekKeys = Object.keys(weeklyMap).sort().reverse();
+        sortedWeekKeys.forEach(k => {
+           let wk = weeklyMap[k];
+           let avgK = wk.cntKcal ? (wk.sumKcal / wk.cntKcal).toFixed(1) : 0;
+           let avgS = wk.cntSubq ? (wk.sumSubq / wk.cntSubq).toFixed(1) : 0;
+           weeklyHtml += `<div class="bg-zinc-800 p-3 rounded-lg flex justify-between items-center border border-zinc-700">
+             <div>
+               <div class="text-yellow-400 font-bold mb-1">${wk.label}</div>
+               <div class="text-[13px] text-zinc-300">該週平均熱量: <span class="text-yellow-200 font-bold">${avgK} kcal</span> | 平均點滴: <span class="text-yellow-200 font-bold">${avgS} cc</span></div>
+             </div>
+           </div>`;
+           
+           if (timeUnit === 'week') {
+              chartDates.unshift(k);
+              chartVals.unshift(wk.cntMetric ? Math.round((wk.sumMetric / wk.cntMetric)*10)/10 : 0);
+           }
+        });
+        document.getElementById('weekly-summary-list').innerHTML = weeklyHtml || `<p class="text-zinc-500 text-sm py-2 px-1">區間內尚無週資料</p>`;
+
+        document.getElementById('avg-kcal').innerText = countKcal ? (totalKcal / countKcal).toFixed(1) + ' kcal' : '0 kcal';
+        document.getElementById('avg-subq').innerText = countSubq ? (totalSubq / countSubq).toFixed(1) + ' cc' : '0 cc';
+        document.getElementById('avg-pee').innerText = countPee ? (totalPee / countPee).toFixed(1) + ' 次' : '0 次';
+        document.getElementById('avg-poop').innerText = countPoop ? (totalPoop / countPoop).toFixed(1) + ' 次' : '0 次';
+        
+        document.getElementById('daily-detail-list').innerHTML = detailHtml || `<p class="text-zinc-500 text-sm text-center py-4">這段時間沒有起居紀錄喔！</p>`;
+
+        renderLineChart('dailyChart', chartDates, chartVals, metric, '#fde047');
+      }
+
+      if(currentStatTab === 'health') {
+        const hData = filterByRange(globalDataCache.Health || []);
+        let wSum=0, cw=0, sysSum=0, csys=0, diaSum=0, cdia=0, pSum=0, cp=0;
+        
+        let chartDates = [], chartVals = [];
+        const metric = document.getElementById('health-chart-metric').value;
+        const timeUnit = document.getElementById('health-chart-time-unit').value;
+        let weeklyMap = {};
+
+        let detailHtml = '';
+
+        hData.forEach(row => {
+          let wStr = getColVal(row, ['體重', '體重(kg)']); if(wStr !== undefined){ wSum+=parseFloat(wStr); cw++; }
+          let sysStr = getColVal(row, ['高壓']); if(sysStr !== undefined){ sysSum+=parseFloat(sysStr); csys++; }
+          let diaStr = getColVal(row, ['低壓']); if(diaStr !== undefined){ diaSum+=parseFloat(diaStr); cdia++; }
+          let pStr = getColVal(row, ['脈搏']); if(pStr !== undefined){ pSum+=parseFloat(pStr); cp++; }
+
+          let bun = getColVal(row, ['BUN(mg/dL)', 'BUN']);
+          let crea = getColVal(row, ['CREA(mg/dL)', 'CREA']);
+
+          let mValAlias = [metric];
+          if(metric.includes('TT4')) mValAlias = ['總甲狀腺（TT4）', '總甲狀腺(TT4)', '總甲狀腺', 'TT4'];
+          if(metric.includes('BUN(')) mValAlias = ['BUN(mg/dL)', 'BUN'];
+          if(metric.includes('CREA(')) mValAlias = ['CREA(mg/dL)', 'CREA'];
+          if(metric.includes('PHOS')) mValAlias = ['磷(PHOS)', '磷'];
+          
+          let mVal = parseFloat(getColVal(row, mValAlias));
+          let hasMetric = !isNaN(mVal);
+
+          let wInfo = getWeekInfo(row['_safeDate']);
+          if (!weeklyMap[wInfo.key]) {
+             weeklyMap[wInfo.key] = { label: wInfo.label, key: wInfo.key, sumMetric:0, cntMetric:0 };
+          }
+          if(hasMetric) {
+             weeklyMap[wInfo.key].sumMetric += mVal;
+             weeklyMap[wInfo.key].cntMetric++;
+          }
+
+          if (timeUnit === 'day' && hasMetric) {
+             chartDates.unshift(row['_safeDate'].substring(5).replace('-', '/'));
+             chartVals.unshift(mVal);
+          }
+
+          detailHtml += `<div class="bg-zinc-800 p-3 rounded-lg flex justify-between items-center border border-zinc-700 mb-2">
+            <div class="w-full">
+              <div class="text-yellow-400 font-bold mb-1">${row['_safeDate']}</div>
+              <div class="text-sm text-zinc-300 mt-1">體重: ${wStr||'-'}kg | BUN: ${bun||'-'} | CREA: ${crea||'-'}</div>
+            </div>
+            <button onclick="editRecord('Health', '${row['_safeDate']}')" class="text-zinc-400 hover:text-yellow-400 p-3 shrink-0"><i class="fa-solid fa-pen"></i></button>
+          </div>`;
+        });
+
+        if (timeUnit === 'week') {
+           let sortedWeekKeys = Object.keys(weeklyMap).sort().reverse();
+           sortedWeekKeys.forEach(k => {
+              let wk = weeklyMap[k];
+              chartDates.unshift(k);
+              chartVals.unshift(wk.cntMetric ? Math.round((wk.sumMetric / wk.cntMetric)*100)/100 : 0);
+           });
+        }
+
+        document.getElementById('avg-weight').innerText = cw ? (wSum/cw).toFixed(2) + ' kg' : '0 kg';
+        document.getElementById('avg-bp-high').innerText = csys ? Math.round(sysSum/csys) : '0';
+        document.getElementById('avg-bp-low').innerText = cdia ? Math.round(diaSum/cdia) : '0';
+        document.getElementById('avg-pulse').innerText = cp ? Math.round(pSum/cp) : '0';
+        
+        document.getElementById('health-detail-list').innerHTML = detailHtml || `<p class="text-zinc-500 text-sm text-center py-4">這段時間沒有健康紀錄喔！</p>`;
+
+        renderLineChart('healthChart', chartDates, chartVals, metric, '#f472b6');
+      }
+
+      if(currentStatTab === 'expenses') {
+        const eData = filterByRange(globalDataCache.Expenses || []);
+        let totalExp = 0;
+        let typeMap = {};
+        let detailHtml = '';
+
+        eData.forEach(row => {
+          let amt = parseFloat(getColVal(row, ['金額 (元)', '金額(元)', '金額', '花費'])) || 0;
+          let type = getColVal(row, ['花費類型', '類型']) || '其他';
+          let item = getColVal(row, ['花費項目', '項目']);
+
+          totalExp += amt;
+          typeMap[type] = (typeMap[type] || 0) + amt;
+          
+          detailHtml += `<div class="bg-zinc-800 p-3 rounded-lg flex justify-between items-center border border-zinc-700 mb-2">
+            <div class="w-full">
+              <div class="text-yellow-400 font-bold mb-1">${row['_safeDate']} <span class="text-zinc-400 text-xs ml-2">[${type}]</span></div>
+              <div class="text-[13px] text-zinc-200">${item||'無項目'} <span class="text-yellow-200 font-bold ml-2">$${amt}</span></div>
+            </div>
+            <button onclick="editRecord('Expenses', '${row['_safeDate']}')" class="text-zinc-400 hover:text-yellow-400 p-3 shrink-0"><i class="fa-solid fa-pen"></i></button>
+          </div>`;
+        });
+
+        document.getElementById('stat-total-exp').innerText = '$' + totalExp.toLocaleString();
+        document.getElementById('exp-detail-list').innerHTML = detailHtml || `<p class="text-zinc-500 text-sm text-center py-4">這段時間沒有花費紀錄喔！</p>`;
+
+        const pieData = Object.keys(typeMap).map(k => ({ name: k, value: typeMap[k] }));
+        renderPieChart('expenseChart', pieData);
+      }
+      
+      setTimeout(() => {
+          if(eChartDaily) eChartDaily.resize();
+          if(eChartHealth) eChartHealth.resize();
+          if(eChartExpense) eChartExpense.resize();
+      }, 100);
+    }
+
+    function renderLineChart(domId, xData, yData, seriesName, colorHex) {
+      let chartDom = document.getElementById(domId);
+      
+      let myChart = echarts.getInstanceByDom(chartDom);
+      if(!myChart) {
+          myChart = echarts.init(chartDom);
+      }
+
+      myChart.resize({ width: 'auto', height: 'auto' });
+
+      let option = {
+        tooltip: { trigger: 'axis', backgroundColor: '#3f3f46', textStyle: { color: '#fff' } },
+        grid: { left: '3%', right: '8%', bottom: '10%', top: '15%', containLabel: true },
+        xAxis: { 
+          type: 'category', 
+          data: xData, 
+          axisLine: { lineStyle: { color: '#a1a1aa' } },
+          axisLabel: { interval: 'auto', rotate: 25 } 
+        },
+        yAxis: { type: 'value', splitLine: { lineStyle: { color: '#3f3f46' } }, axisLabel: { color: '#a1a1aa' } },
+        series: [{
+          name: seriesName,
+          data: yData,
+          type: 'line',
+          smooth: true,
+          symbolSize: 8,
+          itemStyle: { color: colorHex },
+          lineStyle: { width: 3, shadowColor: 'rgba(0,0,0,0.3)', shadowBlur: 10 }
+        }]
+      };
+      myChart.setOption(option);
+      
+      if(domId==='dailyChart') eChartDaily = myChart;
+      if(domId==='healthChart') eChartHealth = myChart;
+    }
+
+    function renderPieChart(domId, data) {
+      let chartDom = document.getElementById(domId);
+      let myChart = echarts.getInstanceByDom(chartDom);
+      if(!myChart) myChart = echarts.init(chartDom);
+
+      myChart.resize({ width: 'auto', height: 'auto' });
+
+      let option = {
+        tooltip: { trigger: 'item', backgroundColor: '#3f3f46', textStyle: { color: '#fff' } },
+        color: ['#fde047', '#f472b6', '#60a5fa', '#34d399', '#a78bfa', '#fb923c'],
+        series: [
+          {
+            name: '花費分佈',
+            type: 'pie',
+            radius: ['40%', '70%'],
+            avoidLabelOverlap: true,
+            itemStyle: { borderRadius: 10, borderColor: '#27272a', borderWidth: 2 },
+            label: { show: true, formatter: '{b}\n{d}%', color: '#fefce8', fontSize: 12 },
+            labelLine: { show: true, length: 15, length2: 20, smooth: true, lineStyle: { color: '#a1a1aa' } },
+            data: data
+          }
+        ]
+      };
+      myChart.setOption(option);
+      eChartExpense = myChart;
+    }
+
+    window.addEventListener('resize', () => {
+      if(eChartDaily) eChartDaily.resize();
+      if(eChartHealth) eChartHealth.resize();
+      if(eChartExpense) eChartExpense.resize();
+    });
+
+  </script>
+</body>
+</html>
