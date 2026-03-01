@@ -11,17 +11,11 @@
   <meta name="apple-mobile-web-app-title" content="Heiyo日誌">
   <meta name="mobile-web-app-capable" content="yes">
   
-  <!-- 替換為標準 PNG 格式的貓爪圖示，解決手機不支援 SVG 導致顯示 H 的問題 -->
   <link rel="icon" type="image/png" href="https://img.icons8.com/ios-filled/512/cat-footprint.png">
   <link rel="apple-touch-icon" href="https://img.icons8.com/ios-filled/512/cat-footprint.png">
   
-  <!-- 引入 Tailwind CSS 進行快速 RWD 排版 -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- 引入 FontAwesome 圖示 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- 引入 ECharts -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
   <style>
@@ -223,7 +217,14 @@
 
   <!-- ==================== 頁面 1: 起居輸入 ==================== -->
   <main id="page-daily" class="page-section active">
-    <h2 class="text-xl font-bold mb-4 text-yellow-300">🐾 起居紀錄</h2>
+    <!-- ✨ 新增的設定按鈕與標題排版 -->
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold text-yellow-300">🐾 起居紀錄</h2>
+      <button type="button" onclick="openSettingsModal()" class="bg-zinc-700 hover:bg-zinc-600 text-yellow-300 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+        <i class="fa-solid fa-gear mr-1"></i>設定
+      </button>
+    </div>
+
     <form id="form-daily" class="card">
       <div class="form-group">
         <label class="form-label">選擇日期 (年 / 月 / 日)</label>
@@ -426,6 +427,7 @@
       <div class="stat-sub-tab" onclick="switchStatTab('expenses', this)">花費</div>
     </div>
 
+    <!-- 查詢區間 (年月日) -->
     <div class="card mb-4" id="stats-filter-card" style="display:none;">
       <div class="flex flex-col gap-3">
         <div class="flex items-center gap-2">
@@ -453,6 +455,7 @@
       
       <!-- [區塊 A] 起居統計 -->
       <div id="stat-sec-daily" class="stat-section block">
+        <!-- 趨勢折線圖移至上方 -->
         <div class="card w-full overflow-hidden">
           <div class="flex justify-between items-center mb-3 border-b border-zinc-600 pb-2">
             <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-chart-line mr-2"></i>趨勢折線圖</h3>
@@ -474,16 +477,6 @@
           <div id="dailyChart" style="width: 100%; height: 260px;"></div>
         </div>
 
-        <div class="card">
-          <h3 class="text-lg font-bold text-yellow-200 mb-3 border-b border-zinc-600 pb-2"><i class="fa-solid fa-utensils mr-2"></i>區間平均/總和</h3>
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div><p class="text-gray-400">平均熱量</p><p class="text-xl font-bold" id="avg-kcal">0 kcal</p></div>
-            <div><p class="text-gray-400">平均皮下點滴</p><p class="text-xl font-bold" id="avg-subq">0 cc</p></div>
-            <div><p class="text-gray-400">平均尿尿</p><p class="text-xl font-bold" id="avg-pee">0 次</p></div>
-            <div><p class="text-gray-400">平均大便</p><p class="text-xl font-bold" id="avg-poop">0 次</p></div>
-          </div>
-        </div>
-
         <div class="card w-full overflow-hidden mt-4">
           <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this, 'weekly-summary-content')">
             <h3 class="text-lg font-bold text-yellow-200"><i class="fa-solid fa-calendar-week mr-2"></i>區間各週摘要</h3>
@@ -491,6 +484,16 @@
           </div>
           <div id="weekly-summary-content" class="mt-3 pt-3 border-t border-zinc-600">
             <div id="weekly-summary-list" class="flex flex-col gap-2"></div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <h3 class="text-lg font-bold text-yellow-200 mb-3 border-b border-zinc-600 pb-2"><i class="fa-solid fa-utensils mr-2"></i>區間平均/總和</h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div><p class="text-gray-400">平均熱量</p><p class="text-xl font-bold" id="avg-kcal">0 kcal</p></div>
+            <div><p class="text-gray-400">平均皮下點滴</p><p class="text-xl font-bold" id="avg-subq">0 cc</p></div>
+            <div><p class="text-gray-400">平均尿尿</p><p class="text-xl font-bold" id="avg-pee">0 次</p></div>
+            <div><p class="text-gray-400">平均大便</p><p class="text-xl font-bold" id="avg-poop">0 次</p></div>
           </div>
         </div>
 
@@ -598,6 +601,25 @@
     </div>
   </nav>
 
+  <!-- ✨ 全域設定彈出視窗 (設定預設值) -->
+  <div id="settings-modal" class="fixed inset-0 bg-zinc-900/95 z-[200] hidden flex-col items-center justify-center p-4">
+    <div class="bg-zinc-800 rounded-xl w-full max-w-sm border border-zinc-600 p-5 relative shadow-2xl">
+      <button type="button" onclick="closeSettingsModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-yellow-400 text-2xl">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-xl font-bold text-yellow-300 mb-4 border-b border-zinc-600 pb-2"><i class="fa-solid fa-gear mr-2"></i>預設值設定</h3>
+      <div class="form-group">
+        <label class="form-label text-yellow-200">乾食卡/克 預設值</label>
+        <input type="number" step="0.001" id="setting-dry-kcal" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label text-yellow-200">濕食卡/克 預設值</label>
+        <input type="number" step="0.001" id="setting-wet-kcal" class="form-input">
+      </div>
+      <button type="button" class="btn-primary mt-4 w-full" onclick="saveSettings()">💾 儲存設定</button>
+    </div>
+  </div>
+
   <!-- ✨ 修改紀錄用的彈出視窗 Modal -->
   <div id="edit-modal" class="fixed inset-0 bg-zinc-900/95 z-[200] hidden flex-col items-center justify-center p-4">
     <div class="bg-zinc-800 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-zinc-600 p-5 relative shadow-2xl">
@@ -623,8 +645,8 @@
           <div class="form-group"><label class="form-label">濕食 (g)</label><input type="number" step="0.1" id="edit-daily-wet" class="form-input"></div>
         </div>
         <div class="grid grid-cols-2 gap-3 border-t border-gray-600 pt-3 mt-1">
-          <div class="form-group"><label class="form-label">乾食卡/克</label><input type="number" step="0.001" id="edit-daily-dry-kcal" class="form-input" value="3.921"></div>
-          <div class="form-group"><label class="form-label">濕食卡/克</label><input type="number" step="0.001" id="edit-daily-wet-kcal" class="form-input" value="0.9"></div>
+          <div class="form-group"><label class="form-label">乾食卡/克</label><input type="number" step="0.001" id="edit-daily-dry-kcal" class="form-input"></div>
+          <div class="form-group"><label class="form-label">濕食卡/克</label><input type="number" step="0.001" id="edit-daily-wet-kcal" class="form-input"></div>
         </div>
         <div class="form-group">
           <label class="form-label text-yellow-300">當日總熱量 (kcal)</label>
@@ -720,6 +742,10 @@
     let eChartExpense = null;
 
     window.onload = () => {
+      // 讀取本地儲存的卡路里預設值並套用
+      document.getElementById('daily-dry-kcal').value = localStorage.getItem('heiyo_dry_kcal') || '3.921';
+      document.getElementById('daily-wet-kcal').value = localStorage.getItem('heiyo_wet_kcal') || '0.9';
+
       setupYMDSelectors('daily-date');
       setupYMDSelectors('health-date');
       setupYMDSelectors('exp-date');
@@ -733,6 +759,34 @@
       fetchDatabaseOnLoad();
     };
 
+    // ✨ 設定功能：開啟、關閉、儲存
+    function openSettingsModal() {
+        document.getElementById('setting-dry-kcal').value = localStorage.getItem('heiyo_dry_kcal') || '3.921';
+        document.getElementById('setting-wet-kcal').value = localStorage.getItem('heiyo_wet_kcal') || '0.9';
+        document.getElementById('settings-modal').classList.remove('hidden');
+        document.getElementById('settings-modal').classList.add('flex');
+    }
+
+    function closeSettingsModal() {
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('settings-modal').classList.remove('flex');
+    }
+
+    function saveSettings() {
+        const dKcal = document.getElementById('setting-dry-kcal').value;
+        const wKcal = document.getElementById('setting-wet-kcal').value;
+        localStorage.setItem('heiyo_dry_kcal', dKcal);
+        localStorage.setItem('heiyo_wet_kcal', wKcal);
+        
+        document.getElementById('daily-dry-kcal').value = dKcal;
+        document.getElementById('daily-wet-kcal').value = wKcal;
+        
+        calculateDailyKcal();
+        closeSettingsModal();
+        showToast('預設值設定已儲存！');
+    }
+
+    // 收合展開手風琴功能
     function toggleSection(element, contentId) {
         const content = document.getElementById(contentId);
         const icon = element.querySelector('.toggle-icon');
@@ -745,6 +799,7 @@
         }
     }
 
+    // 通用的年月日產生器 (鎖定 2025~2032)
     function setupYMDSelectors(prefix, defaultDateObj) {
       const yearSel = document.getElementById(prefix + '-y');
       const monthSel = document.getElementById(prefix + '-m');
@@ -978,8 +1033,8 @@
         document.getElementById('edit-daily-dry-day').value = getColVal(row, ['白天乾食克數', '白天乾食', '白天']) || '';
         document.getElementById('edit-daily-dry-night').value = getColVal(row, ['晚上乾食克數', '晚上乾食', '晚上']) || '';
         document.getElementById('edit-daily-wet').value = getColVal(row, ['濕食克數', '溼食克數', '濕食', '溼食']) || '';
-        document.getElementById('edit-daily-dry-kcal').value = getColVal(row, ['乾食卡/克', '乾食卡']) || '3.921';
-        document.getElementById('edit-daily-wet-kcal').value = getColVal(row, ['濕食卡/克', '溼食卡/克', '濕食卡']) || '0.9';
+        document.getElementById('edit-daily-dry-kcal').value = getColVal(row, ['乾食卡/克', '乾食卡']) || (localStorage.getItem('heiyo_dry_kcal') || '3.921');
+        document.getElementById('edit-daily-wet-kcal').value = getColVal(row, ['濕食卡/克', '溼食卡/克', '濕食卡']) || (localStorage.getItem('heiyo_wet_kcal') || '0.9');
         document.getElementById('edit-daily-pee').value = getColVal(row, ['尿尿次數', '尿尿']) || '';
         document.getElementById('edit-daily-poop').value = getColVal(row, ['大便次數', '大便']) || '';
         document.getElementById('edit-daily-subq').value = getColVal(row, ['皮下', '皮下點滴數', '皮下CC']) || '';
@@ -1205,6 +1260,7 @@
       });
     }
 
+    // 計算這天屬於週一為起點的哪一週
     function getWeekInfo(dateStr) {
         let d = new Date(dateStr);
         let day = d.getDay();
@@ -1223,8 +1279,9 @@
         let mStr = `${monday.getMonth()+1}/${monday.getDate()}`;
         let sStr = `${sunday.getMonth()+1}/${sunday.getDate()}`;
 
+        // ✨ 移除第幾週的文字，只保留年份與起訖日期
         return {
-            label: `${targetThursday.getFullYear()}年 第${weekNum}週 (${mStr} ~ ${sStr})`,
+            label: `${targetThursday.getFullYear()}年 (${mStr} ~ ${sStr})`,
             key: `${targetThursday.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
         };
     }
@@ -1264,6 +1321,7 @@
           let subqRaw = getColVal(row, ['皮下', '皮下點滴數', '皮下CC', '皮下點滴']);
           let peeRaw = getColVal(row, ['尿尿次數', '尿尿']);
           let poopRaw = getColVal(row, ['大便次數', '大便']);
+          let noteStr = getColVal(row, ['備註', 'Notes']);
 
           let dryM = parseFloat(dryMStr) || 0;
           let dryD = parseFloat(dryDStr) || 0;
@@ -1280,10 +1338,12 @@
 
           let wInfo = getWeekInfo(row['_safeDate']);
           if (!weeklyMap[wInfo.key]) {
-             weeklyMap[wInfo.key] = { label: wInfo.label, key: wInfo.key, sumKcal:0, cntKcal:0, sumSubq:0, cntSubq:0, sumMetric:0, cntMetric:0 };
+             // ✨ 各週增加 notes 陣列存放備註
+             weeklyMap[wInfo.key] = { label: wInfo.label, key: wInfo.key, sumKcal:0, cntKcal:0, sumSubq:0, cntSubq:0, sumMetric:0, cntMetric:0, notes: [] };
           }
           if (kcalStr !== undefined) { weeklyMap[wInfo.key].sumKcal += kcal; weeklyMap[wInfo.key].cntKcal++; }
           if (subqRaw !== undefined) { weeklyMap[wInfo.key].sumSubq += subq; weeklyMap[wInfo.key].cntSubq++; }
+          if (noteStr) { weeklyMap[wInfo.key].notes.push({ date: row['_safeDate'], text: noteStr }); }
           
           let metricVal = 0;
           let hasMetric = false;
@@ -1304,19 +1364,15 @@
              chartVals.unshift(hasMetric ? metricVal : 0);
           }
 
-          detailHtml += `<div class="bg-zinc-800 p-2.5 rounded-lg border border-zinc-700 mb-2 flex justify-between items-center">
+          // ✨ 明細排版優化：單行顯示包含熱量，字體微調放大
+          detailHtml += `<div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700 mb-2 flex justify-between items-center">
             <div class="w-full">
               <div class="text-yellow-400 font-bold mb-1">${row['_safeDate']}</div>
-              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-300">
-                <span>乾食 <span class="font-bold text-yellow-200">${dry}</span>g</span> <span class="text-zinc-600">|</span>
-                <span>濕食 <span class="font-bold text-yellow-200">${wet}</span>g</span> <span class="text-zinc-600">|</span>
-                <span>熱量 <span class="font-bold text-yellow-200">${kcal}</span></span> <span class="text-zinc-600">|</span>
-                <span>尿 <span class="font-bold text-yellow-200">${parseFloat(peeRaw)||0}</span></span> <span class="text-zinc-600">|</span>
-                <span>便 <span class="font-bold text-yellow-200">${parseFloat(poopRaw)||0}</span></span> <span class="text-zinc-600">|</span>
-                <span>滴 <span class="font-bold text-yellow-200">${parseFloat(subqRaw)||0}</span></span>
+              <div class="text-[14px] text-zinc-300 leading-tight">
+                乾食<span class="font-bold text-yellow-200">${dry}</span>g<span class="text-zinc-600 mx-1">|</span>濕食<span class="font-bold text-yellow-200">${wet}</span>g<span class="text-zinc-600 mx-1">|</span>熱量<span class="font-bold text-yellow-200">${kcal}</span><span class="text-zinc-600 mx-1">|</span>尿<span class="font-bold text-yellow-200">${parseFloat(peeRaw)||0}</span><span class="text-zinc-600 mx-1">|</span>便<span class="font-bold text-yellow-200">${parseFloat(poopRaw)||0}</span><span class="text-zinc-600 mx-1">|</span>滴<span class="font-bold text-yellow-200">${parseFloat(subqRaw)||0}</span>
               </div>
             </div>
-            <button onclick="editRecord('DailyLiving', '${row['_safeDate']}')" class="text-zinc-400 hover:text-yellow-400 p-3 shrink-0"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="editRecord('DailyLiving', '${row['_safeDate']}')" class="text-zinc-400 hover:text-yellow-400 p-2 shrink-0"><i class="fa-solid fa-pen"></i></button>
           </div>`;
         });
 
@@ -1326,15 +1382,29 @@
            let wk = weeklyMap[k];
            let avgK = wk.cntKcal ? (wk.sumKcal / wk.cntKcal).toFixed(1) : 0;
            let avgS = wk.cntSubq ? (wk.sumSubq / wk.cntSubq).toFixed(1) : 0;
-           weeklyHtml += `<div class="bg-zinc-800 p-3 rounded-lg flex justify-between items-center border border-zinc-700">
-             <div>
-               <div class="text-yellow-400 font-bold mb-1">${wk.label}</div>
-               <div class="text-[13px] text-zinc-300">該週平均熱量: <span class="text-yellow-200 font-bold">${avgK} kcal</span> | 平均點滴: <span class="text-yellow-200 font-bold">${avgS} cc</span></div>
-             </div>
-           </div>`;
+           
+           // ✨ 週區塊加入手風琴下拉備註設計
+           weeklyHtml += `<div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
+             <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this, 'week-note-${k}')">
+               <div>
+                 <div class="text-yellow-400 font-bold mb-1">${wk.label}</div>
+                 <div class="text-[13px] text-zinc-300">平均熱量: <span class="text-yellow-200 font-bold">${avgK}</span> kcal | 平均點滴: <span class="text-yellow-200 font-bold">${avgS}</span> cc</div>
+               </div>
+               ${wk.notes.length > 0 ? '<i class="fa-solid fa-chevron-down text-zinc-400 transition-transform duration-300 toggle-icon"></i>' : '<span class="text-zinc-500 text-xs">無備註</span>'}
+             </div>`;
+             
+             if (wk.notes.length > 0) {
+                 weeklyHtml += `<div id="week-note-${k}" class="hidden mt-2 pt-2 border-t border-zinc-600 text-[13px] text-zinc-300 space-y-1">`;
+                 wk.notes.forEach(n => {
+                     weeklyHtml += `<div><span class="text-yellow-500 mr-1">[${n.date.substring(5).replace('-', '/')}]</span> ${n.text}</div>`;
+                 });
+                 weeklyHtml += `</div>`;
+             }
+             
+           weeklyHtml += `</div>`;
            
            if (timeUnit === 'week') {
-              chartDates.unshift(k);
+              chartDates.unshift(wk.label.substring(6)); // 取出日期的部分當作X軸
               chartVals.unshift(wk.cntMetric ? Math.round((wk.sumMetric / wk.cntMetric)*10)/10 : 0);
            }
         });
@@ -1406,7 +1476,7 @@
            let sortedWeekKeys = Object.keys(weeklyMap).sort().reverse();
            sortedWeekKeys.forEach(k => {
               let wk = weeklyMap[k];
-              chartDates.unshift(k);
+              chartDates.unshift(wk.label.substring(6));
               chartVals.unshift(wk.cntMetric ? Math.round((wk.sumMetric / wk.cntMetric)*100)/100 : 0);
            });
         }
@@ -1468,6 +1538,13 @@
 
       myChart.resize({ width: 'auto', height: 'auto' });
 
+      // ✨ 若為體重，將 Y 軸強制鎖定在 5 到 7.5，讓波動幅度極大化
+      let yAxisConfig = { type: 'value', splitLine: { lineStyle: { color: '#3f3f46' } }, axisLabel: { color: '#a1a1aa' } };
+      if (seriesName === '體重') {
+          yAxisConfig.min = 5;
+          yAxisConfig.max = 7.5;
+      }
+
       let option = {
         tooltip: { trigger: 'axis', backgroundColor: '#3f3f46', textStyle: { color: '#fff' } },
         grid: { left: '3%', right: '8%', bottom: '10%', top: '15%', containLabel: true },
@@ -1477,7 +1554,7 @@
           axisLine: { lineStyle: { color: '#a1a1aa' } },
           axisLabel: { interval: 'auto', rotate: 25 } 
         },
-        yAxis: { type: 'value', splitLine: { lineStyle: { color: '#3f3f46' } }, axisLabel: { color: '#a1a1aa' } },
+        yAxis: yAxisConfig,
         series: [{
           name: seriesName,
           data: yData,
@@ -1488,7 +1565,7 @@
           lineStyle: { width: 3, shadowColor: 'rgba(0,0,0,0.3)', shadowBlur: 10 }
         }]
       };
-      myChart.setOption(option);
+      myChart.setOption(option, true); // true 參數確保圖表設定被完全覆寫，不會留下前一個選項的殘影
       
       if(domId==='dailyChart') eChartDaily = myChart;
       if(domId==='healthChart') eChartHealth = myChart;
